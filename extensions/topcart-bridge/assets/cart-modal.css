@@ -76,7 +76,7 @@ body[data-top-cart-enabled] #modals-rightDrawer:has([data-cart-drawer]) {
 }
 
 /*! CART DRAWER OVERLAY */
-.topcart-drawer-overlay {
+.top-drawer-overlay {
     z-index: 9999;
     position: fixed;
     background-color: #000000a1;
@@ -88,7 +88,7 @@ body[data-top-cart-enabled] #modals-rightDrawer:has([data-cart-drawer]) {
     right: 0;
 }
 
-.topcart-drawer-open .topcart-drawer-overlay {
+.top-drawer-open .top-drawer-overlay {
     display: block;
     opacity: 1;
 }
