@@ -29,6 +29,32 @@ class CartDrawer {
       "form[action*='/cart/add'] [type='submit']", "[data-product-atc]"
     ].join(", ");
 
+    // 🚫 CHOOSE OPTIONS SELECTORS TO EXCLUDE (based on your HTML inspection)
+    this.variantSelectionSelectors = [
+      // Specific selectors from your HTML inspection
+      ".quick-add__submit",                    // Quick add submit buttons
+      "modal-opener button",                   // Buttons inside modal-opener
+      "button[aria-haspopup='dialog']",        // Buttons that open dialogs
+      ".quick-add .quick-add__submit",         // More specific quick add context
+      
+      // Common variant selection patterns (for other themes)
+      "button[class*='choose-options']",
+      "button[class*='select-options']", 
+      "button[class*='quickview']",
+      "button[class*='quick-view']",
+      "button[data-quickview]",
+      "button[data-open-modal]",
+      "button[data-open-quickview]",
+      "button[aria-label*='Choose']",
+      "button[aria-label*='Select']",
+      "button[aria-label*='Options']",
+      "button[title*='Choose']",
+      "button[title*='Select']",
+      "button[title*='Options']",
+      ".quick-add-button[data-quickview]",
+      "[data-quick-add][data-quickview]"
+    ].join(", ");
+
     //? Call the initialize method to set up event listeners and behavior
     this.initialize();
   }
@@ -100,27 +126,76 @@ class CartDrawer {
    * - Trigger the cart drawer to open when a product is added to the cart
    * - Show an alert indicating the product was added
    */
+  // 🎯 ENHANCED ADD TO CART EVENT BINDING - With proper exclusions
   bindAddToCartEvents() {
-    //* Attach to forms (e.g., when a product is added to the cart via a form submission)
+    // Handle form submissions
     document.querySelectorAll(this.addToCartSelectors).forEach((element) => {
       const form = element.closest("form");
-      if (form) {
+      if (form && !this.isVariantSelectionButton(element)) {
         form.addEventListener("submit", (event) => {
-          event.preventDefault(); // Prevent form submission
-          this.toggleCartDrawer(true); // Open the cart drawer
-          alert('Product added to cart!'); // Show an alert to confirm the action
+          if (!this.isVariantSelectionButton(event.target) && 
+              !this.isVariantSelectionButton(event.submitter)) {
+            event.preventDefault();
+            this.toggleCartDrawer(true);
+            console.log('Cart Drawer Opened from form submission');
+          }
         });
       }
     });
 
     //* Attach to buttons (e.g., when a product is added to the cart via a button click)
     document.addEventListener("click", (event) => {
-      if (event.target.closest(this.addToCartSelectors)) {
-        event.preventDefault(); // Prevent default button action (e.g., form submission)
-        this.toggleCartDrawer(true); // Open the cart drawer
-        console.log('Add to Cart Button Clicked');
+      const clickedElement = event.target.closest(this.addToCartSelectors);
+      
+      if (clickedElement && !this.isVariantSelectionButton(clickedElement)) {
+        // Additional check for button text content
+        const buttonText = clickedElement.textContent?.toLowerCase().trim() || '';
+        const isVariantButton = this.isVariantButtonByText(buttonText);
+        
+        if (!isVariantButton) {
+          event.preventDefault();
+          this.toggleCartDrawer(true);
+          console.log('Cart Drawer Opened from add to cart button');
+        } else {
+          console.log('Variant selection button clicked - not triggering cart modal:', buttonText);
+        }
       }
     });
+  }
+
+  // 🔍 CHECK if button is for variant selection (using real selectors)
+  isVariantSelectionButton(element) {
+    if (!element) return false;
+    
+    try {
+      // Check if element matches any variant selection selectors
+      const matches = element.matches && element.matches(this.variantSelectionSelectors);
+      
+      // Additional check for parent context
+      const parentMatches = element.closest && (
+        element.closest('.quick-add') ||           // Quick add container
+        element.closest('modal-opener') ||         // Modal opener container
+        element.closest('[data-modal]')            // Modal trigger container
+      );
+      
+      return matches || parentMatches;
+    } catch (e) {
+      console.warn('Error checking variant selection button:', e);
+      return false;
+    }
+  }
+
+  // 🔍 CHECK button text for variant selection keywords
+  isVariantButtonByText(buttonText) {
+    const variantKeywords = [
+      'choose options', 'select options', 'choose option', 'select option',
+      'quick view', 'quickview', 'view options', 'see options',
+      'choose', 'select', 'options', 'variants'
+    ];
+    
+    return variantKeywords.some(keyword => 
+      buttonText.includes(keyword) && !buttonText.includes('add to cart')
+    );
   }
 
    //! Toggle the visibility of the cart drawer
