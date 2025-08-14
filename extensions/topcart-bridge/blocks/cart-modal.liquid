@@ -1,0 +1,40 @@
+{% assign avg_rating = block.settings.product.metafields.demo.avg_rating.value | round %}
+<span style="color:{{ block.settings.colour }}">
+  {% render 'stars', rating: avg_rating %}
+</span>
+{% if avg_rating >= 4 %}
+  <br>
+  <img src="{{ "thumbs-up.png" | asset_img_url: '15x' }}" height="15" width="15" loading="lazy">
+  {{ 'ratings.home.recommendationText' | t }}
+{% endif %}
+
+{% schema %}
+{
+"name": "TopCart Modal",
+"target": "body",
+"settings": [
+{
+"type": "header",
+"content": "Cart Modal Settings"
+},
+{
+"type": "select",
+"id": "modal_position",
+"label": "Modal Position",
+"options": [
+{ "value": "right", "label": "Slide from Right" },
+{ "value": "left", "label": "Slide from Left" },
+{ "value": "center", "label": "Center Popup" }
+],
+"default": "right"
+},
+{
+"type": "color",
+"id": "background_color",
+"label": "Background Color",
+"default": "#ffffff"
+}
+]
+}
+{% endschema %}
+
