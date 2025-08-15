@@ -167,3 +167,5 @@ When user says: **"GENERATE RESUME"**
 - **Maintain file organization** and consistent code patterns
 - **Generate resumes proactively** to maintain continuity
 - **Your memory is the project's continuity backbone** - be thorough!
+
+- to memorize
