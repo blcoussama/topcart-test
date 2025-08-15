@@ -3,7 +3,7 @@
 client_id = "c0b24b5aa2a77d8a369d1377572e28dc"
 name = "top-cart-test"
 handle = "top-cart-test"
-application_url = "https://conf-hearts-maximum-tries.trycloudflare.com"
+application_url = "https://attraction-flash-annoying-forgotten.trycloudflare.com"
 embedded = true
 
 [build]
@@ -26,7 +26,7 @@ uri = "/webhooks/app/scopes_update"
 scopes = "write_products"
 
 [auth]
-redirect_urls = ["https://conf-hearts-maximum-tries.trycloudflare.com/auth/callback", "https://conf-hearts-maximum-tries.trycloudflare.com/auth/shopify/callback", "https://conf-hearts-maximum-tries.trycloudflare.com/api/auth/callback"]
+redirect_urls = ["https://attraction-flash-annoying-forgotten.trycloudflare.com/auth/callback", "https://attraction-flash-annoying-forgotten.trycloudflare.com/auth/shopify/callback", "https://attraction-flash-annoying-forgotten.trycloudflare.com/api/auth/callback"]
 
 [pos]
 embedded = false
