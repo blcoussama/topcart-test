@@ -3,7 +3,7 @@
 client_id = "c0b24b5aa2a77d8a369d1377572e28dc"
 name = "top-cart-test"
 handle = "top-cart-test"
-application_url = "https://contests-gradually-backgrounds-michelle.trycloudflare.com"
+application_url = "https://etc-wars-describing-publish.trycloudflare.com"
 embedded = true
 
 [build]
@@ -26,11 +26,7 @@ uri = "/webhooks/app/scopes_update"
 scopes = "write_products"
 
 [auth]
-redirect_urls = [
-  "https://contests-gradually-backgrounds-michelle.trycloudflare.com/auth/callback",
-  "https://contests-gradually-backgrounds-michelle.trycloudflare.com/auth/shopify/callback",
-  "https://contests-gradually-backgrounds-michelle.trycloudflare.com/api/auth/callback",
-]
+redirect_urls = ["https://etc-wars-describing-publish.trycloudflare.com/auth/callback", "https://etc-wars-describing-publish.trycloudflare.com/auth/shopify/callback", "https://etc-wars-describing-publish.trycloudflare.com/api/auth/callback"]
 
 [pos]
 embedded = false
