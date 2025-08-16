@@ -40,7 +40,6 @@ class CartAPIManager {
       console.log('🌐 CartAPI: Preparing add to cart request');
       const body = { 
         items: Array.isArray(items) ? items : [items],
-        // 🎯 For theme app extensions, we'll handle section rendering differently
         ...options 
       };
 
@@ -70,12 +69,8 @@ class CartAPIManager {
       const result = await response.json();
       console.log('🌐 CartAPI: Response result:', result);
       
-      console.log('🔄 CartAPI: Refreshing cart data after add...');
-      await this.getCart(); // Get fresh cart data
-      
-      // 🎯 IMMEDIATE CART COUNT UPDATE - Force update for first-time scenarios
-      this.notifySubscribers();
-      
+      console.log('🔄 CartAPI: Refreshing cart data...');
+      await this.getCart(); // Refresh cart data
       console.log('✅ CartAPI: Add to cart completed successfully');
       return result;
     } catch (error) {
@@ -92,7 +87,6 @@ class CartAPIManager {
         id: lineKey,
         quantity: quantity,
         properties: properties
-        // 🎯 For theme app extensions, we'll update cart and re-render
       };
 
       const response = await fetch(`${this.baseUrl}cart/change.js`, {
@@ -169,9 +163,6 @@ class TopCartDrawer extends CartAPIManager {
     this.subtotalElement = document.querySelector("#subtotal");
     this.discountElement = document.querySelector("#discount");
     this.totalElement = document.querySelector("#total");
-    
-    // 🎯 Track previous cart count for empty→filled detection
-    this.previousCartCount = 0;
     
     // Debug: Log which elements were found
     console.log('🔍 TopCart: Element Detection:');
@@ -260,12 +251,6 @@ class TopCartDrawer extends CartAPIManager {
     } catch (error) {
       console.error('Failed to load initial cart data:', error);
     }
-
-    //? Subscribe to cart changes for automatic UI updates
-    this.subscribe((cartData) => {
-      console.log('📦 TopCart: Cart changed, updating UI');
-      this.renderCartContent();
-    });
 
     //? Bind events to open/close the cart drawer and handle add-to-cart actions
     this.bindCartIconToggleEvents();
@@ -623,7 +608,7 @@ class TopCartDrawer extends CartAPIManager {
     document.body.classList.remove('modal-open', 'no-scroll', 'overflow-hidden', 'fixed');
     
     // Force reflow to ensure changes take effect
-    void document.body.offsetHeight;
+    document.body.offsetHeight;
     
     console.log('🧹 UI blocking cleared comprehensively');
   }
@@ -663,7 +648,7 @@ class TopCartDrawer extends CartAPIManager {
         console.log('📊 TopCart: Loading cart data in background...');
         await this.getCart();
         this.renderCartContent();
-        console.log('✅ TopCart: Cart data loaded and rendered');
+        console.log('✅ TopCart: Cart data loaded and content rendered');
       } catch (error) {
         console.error('❌ TopCart: Failed to load cart data:', error);
       }
@@ -706,12 +691,10 @@ class TopCartDrawer extends CartAPIManager {
     }
   }
 
-  //! RENDER CART CONTENT - Use JavaScript templates with real cart data
+  //! RENDER CART CONTENT - Replace hardcoded HTML with real data
   renderCartContent() {
     if (!this.cartData || !this.cartItemsContainer) return;
 
-    console.log('🎨 TopCart: Rendering cart content with current cart data');
-    
     if (this.cartData.items.length === 0) {
       this.renderEmptyCart();
     } else {
@@ -719,9 +702,6 @@ class TopCartDrawer extends CartAPIManager {
     }
 
     this.renderCartTotals();
-    
-    // 🎯 ENSURE CART COUNT UPDATE - Critical for first-time scenarios  
-    this.updateCartCount();
   }
 
   //! RENDER EMPTY CART
@@ -1015,19 +995,6 @@ class TopCartDrawer extends CartAPIManager {
     if (!this.cartData) return;
     
     const itemCount = this.cartData.item_count || 0;
-    console.log(`🔢 TopCart: Updating cart count from ${this.previousCartCount || 'undefined'} to ${itemCount}`);
-    
-    // Track if this is empty→filled transition (the problematic case)
-    const wasEmpty = (this.previousCartCount || 0) === 0;
-    const isNowFilled = itemCount > 0;
-    const isEmptyToFilledTransition = wasEmpty && isNowFilled;
-    
-    if (isEmptyToFilledTransition) {
-      console.log('🎯 TopCart: Detected EMPTY→FILLED transition - using systematic cart counter discovery');
-    }
-    
-    // 🎯 SYSTEMATIC APPROACH: Find cart counters across all themes
-    this.findAndUpdateCartCounters(itemCount, isEmptyToFilledTransition);
     
     // 🚀 ENHANCED: Wait for DOM to be fully ready and retry if needed
     const performUpdate = () => {
@@ -1051,21 +1018,9 @@ class TopCartDrawer extends CartAPIManager {
         // Liquid template targets
         '#cart-item-count', '.js-cart-item-count', '[data-item-count]',
         
-        // 🆕 EMPTY→FILLED TRANSITION: Enhanced selectors for initially hidden elements
+        // 🆕 FIRST LOAD FIX: Additional selectors for initial state
         '.header__icons .cart-count', '.header-item .cart-count',
-        '[data-cart-bubble]', '.js-cart-count', '#header-cart-count',
-        
-        // 🎯 AGGRESSIVE SELECTORS for empty→filled case
-        ...(isEmptyToFilledTransition ? [
-          '.header *[class*="cart"] *[class*="count"]',
-          '.header *[class*="cart"] *[class*="bubble"]', 
-          '.header *[class*="cart"] *[class*="badge"]',
-          '[class*="cart-icon"] *[class*="count"]',
-          '[class*="mini-cart"] *[class*="count"]',
-          // Look for hidden elements that become visible
-          '*[style*="display: none"] *[class*="count"]',
-          '*[class*="hidden"] *[class*="count"]'
-        ] : [])
+        '[data-cart-bubble]', '.js-cart-count', '#header-cart-count'
       ];
       
       let updatedElements = 0;
@@ -1074,36 +1029,19 @@ class TopCartDrawer extends CartAPIManager {
         const elements = document.querySelectorAll(selector);
         elements.forEach(element => {
           if (element) {
-            console.log(`🔍 Found element with selector "${selector}":`, element);
+            // Update the count
             element.textContent = itemCount;
             
-            // 🎯 ENHANCED VISIBILITY LOGIC for empty→filled transition
+            // 🔧 IMPROVED VISIBILITY LOGIC
             if (itemCount > 0) {
-              // Show elements when cart has items - be more aggressive for empty→filled
-              if (isEmptyToFilledTransition) {
-                console.log('🎯 Forcing visibility for empty→filled transition');
-                element.style.setProperty('display', 'block', 'important');
-                element.style.setProperty('visibility', 'visible', 'important');
-                element.style.setProperty('opacity', '1', 'important');
-              } else {
-                element.style.display = '';
-                element.style.visibility = 'visible';
-                element.style.opacity = '1';
-              }
+              // Show the counter
+              element.style.display = '';
+              element.style.visibility = 'visible';
+              element.style.opacity = '1';
               element.classList.remove('hidden', 'hide', 'cart-count--hidden');
               element.classList.add('visible', 'cart-count--visible');
-              
-              // Also show parent elements that might be hidden
-              let parent = element.parentElement;
-              while (parent && parent !== document.body) {
-                if (parent.style.display === 'none') {
-                  console.log('🎯 Making parent visible:', parent);
-                  parent.style.display = '';
-                }
-                parent = parent.parentElement;
-              }
             } else {
-              // Hide when empty
+              // 🆕 HIDE WHEN EMPTY: Follow theme's original behavior
               element.style.display = 'none';
               element.style.visibility = 'hidden';
               element.style.opacity = '0';
@@ -1122,35 +1060,24 @@ class TopCartDrawer extends CartAPIManager {
     // Try updating immediately
     let updatedElements = performUpdate();
     
-    // 🎯 ENHANCED RETRY LOGIC for empty→filled transition
-    if (updatedElements === 0 || (isEmptyToFilledTransition && updatedElements < 2)) {
-      console.log(`🔄 ${isEmptyToFilledTransition ? 'Empty→filled transition' : 'No elements'} - enhanced retry sequence...`);
+    // 🚀 FIRST LOAD FIX: If no elements found, wait for theme initialization
+    if (updatedElements === 0) {
+      console.log('🔄 No cart counter elements found, retrying after theme initialization...');
       
-      // Immediate retry for empty→filled
+      // Try again after a short delay for theme to initialize
       setTimeout(() => {
         updatedElements = performUpdate();
-        console.log(`🔄 First retry: Updated ${updatedElements} elements`);
-        
-        if (updatedElements === 0 || (isEmptyToFilledTransition && updatedElements < 2)) {
-          // Longer delay retry
+        if (updatedElements === 0) {
+          // Try one more time after longer delay
           setTimeout(() => {
             updatedElements = performUpdate();
-            console.log(`🔄 Second retry: Updated ${updatedElements} elements`);
-            
-            // Final aggressive retry for empty→filled
-            if (isEmptyToFilledTransition && updatedElements === 0) {
-              setTimeout(() => {
-                console.log('🎯 Final aggressive retry for empty→filled...');
-                this.forceCartCountUpdate(itemCount);
-              }, 1500);
-            }
-          }, 800);
+            console.log(`🔄 Final attempt: Updated cart count to ${itemCount} on ${updatedElements} elements`);
+          }, 1000);
+        } else {
+          console.log(`🔄 Retry successful: Updated cart count to ${itemCount} on ${updatedElements} elements`);
         }
-      }, 100);
+      }, 200);
     }
-    
-    // Store current count for next comparison
-    this.previousCartCount = itemCount;
     
     // Also trigger cart count update events that themes might be listening for
     // Mark our events so we don't listen to our own events
@@ -1170,148 +1097,6 @@ class TopCartDrawer extends CartAPIManager {
     }));
     
     console.log(`🔄 Updated cart count to ${itemCount} on ${updatedElements} elements`);
-  }
-
-  //! SYSTEMATIC CART COUNTER DISCOVERY - Find cart counters across all themes
-  findAndUpdateCartCounters(itemCount, isEmptyToFilledTransition) {
-    console.log('🔍 TopCart: Starting systematic cart counter discovery...');
-    
-    let updatedCounters = 0;
-    
-    // 🎯 STRATEGY 1: Look for cart links and inspect their structure
-    const cartLinks = document.querySelectorAll('a[href*="/cart"], a[href="#cart"], [data-cart], [class*="cart"]');
-    
-    cartLinks.forEach(cartLink => {
-      // Look for counter elements within or near cart links
-      const possibleCounters = [
-        cartLink.querySelector('span, .count, .bubble, .badge, .counter'),
-        cartLink.parentElement?.querySelector('span, .count, .bubble, .badge, .counter'),
-        cartLink.nextElementSibling,
-        cartLink.previousElementSibling
-      ].filter(el => el);
-      
-      possibleCounters.forEach(counter => {
-        if (this.isLikelyCartCounter(counter, itemCount)) {
-          console.log('🎯 Found cart counter via cart link analysis:', counter);
-          this.updateSingleCounter(counter, itemCount, isEmptyToFilledTransition);
-          updatedCounters++;
-        }
-      });
-    });
-    
-    // 🎯 STRATEGY 2: Look in header/navigation areas
-    const headerAreas = document.querySelectorAll('header, nav, .header, .navigation, [class*="header"], [id*="header"]');
-    
-    headerAreas.forEach(area => {
-      const possibleCounters = area.querySelectorAll('span, div, .count, .bubble, .badge, .counter');
-      
-      possibleCounters.forEach(counter => {
-        if (this.isLikelyCartCounter(counter, itemCount)) {
-          console.log('🎯 Found cart counter in header area:', counter);
-          this.updateSingleCounter(counter, itemCount, isEmptyToFilledTransition);
-          updatedCounters++;
-        }
-      });
-    });
-    
-    // 🎯 STRATEGY 3: Look for elements containing cart-related text or numbers
-    if (updatedCounters === 0 || isEmptyToFilledTransition) {
-      console.log('🔍 No counters found or empty→filled transition, using text content analysis...');
-      
-      const allTextElements = document.querySelectorAll('span, div, p');
-      allTextElements.forEach(element => {
-        const text = element.textContent?.trim();
-        const hasCartContext = this.hasCartContext(element);
-        
-        // Look for elements showing "0" or small numbers near cart context
-        if (hasCartContext && (text === '0' || text === '' || /^\d+$/.test(text))) {
-          console.log('🎯 Found potential cart counter via context analysis:', element);
-          this.updateSingleCounter(element, itemCount, isEmptyToFilledTransition);
-          updatedCounters++;
-        }
-      });
-    }
-    
-    console.log(`🎯 Systematic discovery updated ${updatedCounters} cart counters`);
-    
-    // Store current count for next comparison
-    this.previousCartCount = itemCount;
-  }
-
-  //! CHECK IF ELEMENT IS LIKELY A CART COUNTER
-  isLikelyCartCounter(element, expectedCount) {
-    if (!element) return false;
-    
-    const text = element.textContent?.trim();
-    const className = element.className || '';
-    const id = element.id || '';
-    
-    // Check if it looks like a counter (contains numbers or is empty)
-    const looksLikeCounter = text === '0' || text === '' || /^\d+$/.test(text);
-    
-    // Check if it has cart-related context
-    const hasCartClasses = /cart|count|bubble|badge|mini|header/.test(className.toLowerCase());
-    const hasCartId = /cart|count|bubble|badge/.test(id.toLowerCase());
-    const hasCartContext = this.hasCartContext(element);
-    
-    return looksLikeCounter && (hasCartClasses || hasCartId || hasCartContext);
-  }
-
-  //! CHECK IF ELEMENT HAS CART CONTEXT
-  hasCartContext(element) {
-    // Check parent elements for cart context
-    let current = element;
-    let depth = 0;
-    
-    while (current && depth < 5) {
-      const className = current.className || '';
-      const id = current.id || '';
-      
-      if (/cart|header|nav|mini/.test(className.toLowerCase()) || 
-          /cart|header|nav/.test(id.toLowerCase())) {
-        return true;
-      }
-      
-      current = current.parentElement;
-      depth++;
-    }
-    
-    return false;
-  }
-
-  //! UPDATE SINGLE CART COUNTER ELEMENT
-  updateSingleCounter(element, itemCount, isEmptyToFilledTransition) {
-    if (!element) return;
-    
-    console.log(`🔄 Updating counter element to ${itemCount}:`, element);
-    
-    // Update the text content
-    element.textContent = itemCount;
-    
-    // Handle visibility for empty→filled transitions
-    if (isEmptyToFilledTransition && itemCount > 0) {
-      // Force visibility for empty→filled case
-      element.style.setProperty('display', 'inline', 'important');
-      element.style.setProperty('visibility', 'visible', 'important');
-      element.style.setProperty('opacity', '1', 'important');
-      
-      // Also make parent elements visible if needed
-      let parent = element.parentElement;
-      while (parent && parent !== document.body) {
-        if (getComputedStyle(parent).display === 'none') {
-          parent.style.display = '';
-        }
-        parent = parent.parentElement;
-      }
-    } else if (itemCount === 0) {
-      // Hide when cart is empty
-      element.style.display = 'none';
-    } else {
-      // Normal visibility
-      element.style.display = '';
-      element.style.visibility = 'visible';
-      element.style.opacity = '1';
-    }
   }
 
   //! BIND CHECKOUT BUTTON - Handle checkout redirection

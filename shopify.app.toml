@@ -3,7 +3,7 @@
 client_id = "c0b24b5aa2a77d8a369d1377572e28dc"
 name = "top-cart-test"
 handle = "top-cart-test"
-application_url = "https://offer-apartment-bridge-uses.trycloudflare.com"
+application_url = "https://queensland-humans-sail-regard.trycloudflare.com"
 embedded = true
 
 [build]
@@ -26,7 +26,7 @@ uri = "/webhooks/app/scopes_update"
 scopes = "write_products"
 
 [auth]
-redirect_urls = ["https://offer-apartment-bridge-uses.trycloudflare.com/auth/callback", "https://offer-apartment-bridge-uses.trycloudflare.com/auth/shopify/callback", "https://offer-apartment-bridge-uses.trycloudflare.com/api/auth/callback"]
+redirect_urls = ["https://queensland-humans-sail-regard.trycloudflare.com/auth/callback", "https://queensland-humans-sail-regard.trycloudflare.com/auth/shopify/callback", "https://queensland-humans-sail-regard.trycloudflare.com/api/auth/callback"]
 
 [pos]
 embedded = false
