@@ -34,10 +34,11 @@ class CartAPIManager {
     }
   }
 
-  // Add item to cart
+  // Add item to cart using standard Cart API
   async addToCart(items, options = {}) {
     try {
       console.log('🌐 CartAPI: Preparing add to cart request');
+      
       const body = { 
         items: Array.isArray(items) ? items : [items],
         ...options 
@@ -80,7 +81,7 @@ class CartAPIManager {
     }
   }
 
-  // Change specific line item
+  // Change specific line item using standard Cart API
   async changeLineItem(lineKey, quantity, properties = {}) {
     try {
       const body = {
@@ -102,7 +103,8 @@ class CartAPIManager {
         throw new Error('Line item change failed');
       }
 
-      this.cartData = await response.json();
+      const result = await response.json();
+      this.cartData = result;
       this.notifySubscribers();
       return this.cartData;
     } catch (error) {
@@ -149,6 +151,7 @@ class CartAPIManager {
       requiresShipping: this.cartData.requires_shipping
     };
   }
+
 }
 
 class TopCartDrawer extends CartAPIManager {
@@ -163,6 +166,9 @@ class TopCartDrawer extends CartAPIManager {
     this.subtotalElement = document.querySelector("#subtotal");
     this.discountElement = document.querySelector("#discount");
     this.totalElement = document.querySelector("#total");
+    
+    // 🚀 FIRST ADD FIX: Track previous item count for empty→filled detection
+    this.previousItemCount = 0;
     
     // Debug: Log which elements were found
     console.log('🔍 TopCart: Element Detection:');
@@ -244,10 +250,26 @@ class TopCartDrawer extends CartAPIManager {
     //? Replace cart-related elements with their clones (to avoid any issues with event listeners)
     this.replaceCartElements();
 
-    //? Load initial cart data
+    //? Load initial cart data and render content
     try {
       await this.getCart();
       console.log('Initial cart data loaded:', this.cartData);
+      
+      // 🚀 FIRST ADD FIX: Initialize previous count from initial load
+      this.previousItemCount = this.cartData ? (this.cartData.item_count || 0) : 0;
+      console.log('🎯 Initialized previousItemCount:', this.previousItemCount);
+      
+      // 🎯 RENDER: Initialize cart content on load
+      this.renderCartContent();
+      console.log('🎨 Initial cart content rendered');
+      
+      // 🚀 DOM TIMING FIX: Wait for theme to fully initialize cart elements
+      // Dawn theme creates cart counter elements after theme initialization
+      setTimeout(() => {
+        console.log('🕒 Performing delayed cart count update after theme initialization...');
+        this.updateCartCount();
+      }, 1000); // Give theme time to create cart counter elements
+      
     } catch (error) {
       console.error('Failed to load initial cart data:', error);
     }
@@ -959,9 +981,9 @@ class TopCartDrawer extends CartAPIManager {
       ]);
       console.log('✅ TopCart: Successfully added to cart:', result);
       
-      // Update cart count in header
-      console.log('🔄 TopCart: Updating cart count...');
-      this.updateCartCount();
+      // Update cart count in header - with extra aggressive retry for first add
+      console.log('🔄 TopCart: Updating cart count (with first-add handling)...');
+      this.updateCartCountWithFirstAddFix();
       
       // Show success message briefly, then open cart drawer
       console.log('🎉 TopCart: Showing success message...');
@@ -996,7 +1018,7 @@ class TopCartDrawer extends CartAPIManager {
     
     const itemCount = this.cartData.item_count || 0;
     
-    // 🚀 ENHANCED: Wait for DOM to be fully ready and retry if needed
+    // 🚀 DOM TIMING FIX: Handle case where cart elements don't exist yet
     const performUpdate = () => {
       // Comprehensive selectors covering most Shopify themes
       const countSelectors = [
@@ -1097,6 +1119,144 @@ class TopCartDrawer extends CartAPIManager {
     }));
     
     console.log(`🔄 Updated cart count to ${itemCount} on ${updatedElements} elements`);
+  }
+
+  // 🚀 ENHANCED: Cart count update with aggressive retry for first add (empty→filled)
+  updateCartCountWithFirstAddFix() {
+    if (!this.cartData) return;
+    
+    const itemCount = this.cartData.item_count || 0;
+    const wasEmpty = this.previousItemCount === 0;
+    const isNowFilled = itemCount > 0;
+    
+    console.log(`🔄 Enhanced cart count update: previous=${this.previousItemCount}, current=${itemCount}, wasEmpty=${wasEmpty}, isNowFilled=${isNowFilled}`);
+    
+    // Store previous count for next comparison
+    this.previousItemCount = itemCount;
+    
+    // For empty→filled transition, use more aggressive retry strategy
+    if (wasEmpty && isNowFilled) {
+      console.log('🎯 Detected empty→filled transition - using aggressive update strategy');
+      this.aggressiveCountUpdate(itemCount);
+    } else {
+      // Normal update for other scenarios
+      this.updateCartCount();
+    }
+  }
+
+  // Aggressive cart count update for first add scenario
+  aggressiveCountUpdate(itemCount) {
+    const maxRetries = 5;
+    let retryCount = 0;
+    
+    const performAggressiveUpdate = () => {
+      console.log(`🎯 Aggressive update attempt ${retryCount + 1}/${maxRetries}`);
+      
+      // Enhanced selectors specifically for empty→filled transition
+      const countSelectors = [
+        // High priority selectors for common themes
+        '#CartCount span', '#CartCount', '.cart-count', '[data-cart-count]',
+        '.cart-icon-count', '.header-cart-count', '.cart-counter', '.mini-cart-count',
+        
+        // Dawn theme specific
+        '.header__icons .cart-count', '.header-item .cart-count',
+        
+        // Common bubble selectors
+        '.cart-count-bubble', '.cart-item-count', '.badge-count', '.count-badge',
+        
+        // Section-specific (often missed on first load)
+        'cart-icon-bubble', '[data-cart-bubble]', '.js-cart-count',
+        '#header-cart-count', '#mini-cart-count',
+        
+        // Theme variations
+        '.site-header .cart-count', '.site-nav .cart-count',
+        '[data-items-count]', '[data-cart-item-count]',
+        
+        // Fallback patterns
+        '.cart-link [data-cart-count]', '[data-cart-render="item_count"]',
+        '.js-cart-item-count', '#cart-item-count'
+      ];
+      
+      let elementsUpdated = 0;
+      
+      countSelectors.forEach(selector => {
+        try {
+          const elements = document.querySelectorAll(selector);
+          elements.forEach(element => {
+            if (element) {
+              // Force update with multiple strategies
+              element.textContent = itemCount;
+              element.innerText = itemCount;
+              element.innerHTML = itemCount;
+              
+              // Aggressive visibility forcing
+              element.style.display = 'inline-block';
+              element.style.visibility = 'visible';
+              element.style.opacity = '1';
+              
+              // Remove hiding classes
+              element.classList.remove('hidden', 'hide', 'cart-count--hidden', 'visually-hidden');
+              element.classList.add('visible', 'cart-count--visible');
+              
+              // Force attribute updates
+              element.setAttribute('data-cart-count', itemCount);
+              element.setAttribute('aria-label', `${itemCount} items in cart`);
+              
+              elementsUpdated++;
+              console.log(`✅ Updated element with selector "${selector}":`, element);
+            }
+          });
+        } catch (error) {
+          console.warn(`Failed to update selector "${selector}":`, error);
+        }
+      });
+      
+      console.log(`🎯 Aggressive update ${retryCount + 1}: Updated ${elementsUpdated} elements`);
+      
+      // If we updated some elements, we're probably good
+      if (elementsUpdated > 0) {
+        console.log('✅ Aggressive update successful');
+        return true;
+      }
+      
+      return false;
+    };
+    
+    // Immediate attempt
+    if (performAggressiveUpdate()) {
+      return;
+    }
+    
+    // Retry with increasing delays
+    const retryIntervals = [100, 300, 600, 1000, 2000];
+    
+    retryIntervals.forEach((delay, index) => {
+      setTimeout(() => {
+        retryCount = index + 1;
+        if (retryCount <= maxRetries) {
+          console.log(`🔄 Retry ${retryCount} after ${delay}ms delay...`);
+          performAggressiveUpdate();
+        }
+      }, delay);
+    });
+    
+    // Trigger cart update events aggressively
+    document.dispatchEvent(new CustomEvent('cart:updated', {
+      detail: { 
+        itemCount: itemCount, 
+        cart: this.cartData,
+        source: 'topcart-aggressive',
+        firstAdd: true
+      }
+    }));
+    
+    document.dispatchEvent(new CustomEvent('cart-count:updated', {
+      detail: { 
+        count: itemCount,
+        source: 'topcart-aggressive',
+        firstAdd: true
+      }
+    }));
   }
 
   //! BIND CHECKOUT BUTTON - Handle checkout redirection
