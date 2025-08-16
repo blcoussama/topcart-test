@@ -1042,33 +1042,90 @@ class TopCartDrawer extends CartAPIManager {
         
         // 🆕 FIRST LOAD FIX: Additional selectors for initial state
         '.header__icons .cart-count', '.header-item .cart-count',
-        '[data-cart-bubble]', '.js-cart-count', '#header-cart-count'
+        '[data-cart-bubble]', '.js-cart-count', '#header-cart-count',
+        
+        // 🚀 IMPULSE THEME SPECIFIC: Bubble visibility pattern
+        '.cart-link__bubble', 'span.cart-link__bubble',
+        
+        // 🚀 DAWN THEME SPECIFIC: Counter bubble pattern
+        '.cart-count-bubble', '#cart-icon-bubble .cart-count-bubble'
       ];
       
       let updatedElements = 0;
+      
+      // 🚀 DAWN THEME FIX: Check if counter element needs to be created
+      const dawnCartIcon = document.querySelector('#cart-icon-bubble');
+      let dawnCounterElement = document.querySelector('#cart-icon-bubble .cart-count-bubble');
+      
+      if (dawnCartIcon && !dawnCounterElement && itemCount > 0) {
+        // Create Dawn counter element when it doesn't exist but should
+        console.log('🏗️ Creating Dawn counter element dynamically');
+        dawnCounterElement = document.createElement('div');
+        dawnCounterElement.className = 'cart-count-bubble visible cart-count--visible';
+        dawnCounterElement.style.visibility = 'visible';
+        dawnCounterElement.style.opacity = '1';
+        
+        // 🎯 FIX: Ensure proper text alignment and positioning
+        dawnCounterElement.style.display = 'flex';
+        dawnCounterElement.style.alignItems = 'center';
+        dawnCounterElement.style.justifyContent = 'center';
+        dawnCounterElement.style.textAlign = 'center';
+        dawnCounterElement.style.lineHeight = '1';
+        
+        dawnCartIcon.appendChild(dawnCounterElement);
+        console.log('✅ Dawn counter element created with proper styling');
+      }
       
       countSelectors.forEach(selector => {
         const elements = document.querySelectorAll(selector);
         elements.forEach(element => {
           if (element) {
-            // Update the count
-            element.textContent = itemCount;
+            // 🚀 IMPULSE THEME SPECIFIC: Handle bubble visibility pattern
+            const isImpulseBubble = element.classList.contains('cart-link__bubble');
+            const isDawnCounter = element.classList.contains('cart-count-bubble');
             
-            // 🔧 IMPROVED VISIBILITY LOGIC
-            if (itemCount > 0) {
-              // Show the counter
-              element.style.display = '';
-              element.style.visibility = 'visible';
-              element.style.opacity = '1';
-              element.classList.remove('hidden', 'hide', 'cart-count--hidden');
-              element.classList.add('visible', 'cart-count--visible');
+            if (isImpulseBubble) {
+              // Impulse theme uses classes, not text content
+              if (itemCount > 0) {
+                element.classList.add('cart-link__bubble--visible');
+                console.log('🎯 Added cart-link__bubble--visible class');
+              } else {
+                element.classList.remove('cart-link__bubble--visible');
+                console.log('🎯 Removed cart-link__bubble--visible class');
+              }
+            } else if (isDawnCounter) {
+              // 🚀 DAWN THEME SPECIFIC: Handle counter creation/removal
+              if (itemCount > 0) {
+                element.textContent = itemCount;
+                element.className = 'cart-count-bubble visible cart-count--visible';
+                element.style.visibility = 'visible';
+                element.style.opacity = '1';
+                console.log('🎯 Updated Dawn counter:', itemCount);
+              } else {
+                // Remove the element when cart is empty (Dawn's behavior)
+                element.remove();
+                console.log('🗑️ Removed Dawn counter element (empty cart)');
+              }
             } else {
-              // 🆕 HIDE WHEN EMPTY: Follow theme's original behavior
-              element.style.display = 'none';
-              element.style.visibility = 'hidden';
-              element.style.opacity = '0';
-              element.classList.add('hidden', 'cart-count--hidden');
-              element.classList.remove('visible', 'cart-count--visible');
+              // Standard themes: Update text content and visibility
+              element.textContent = itemCount;
+              
+              // 🔧 IMPROVED VISIBILITY LOGIC
+              if (itemCount > 0) {
+                // Show the counter
+                element.style.display = '';
+                element.style.visibility = 'visible';
+                element.style.opacity = '1';
+                element.classList.remove('hidden', 'hide', 'cart-count--hidden');
+                element.classList.add('visible', 'cart-count--visible');
+              } else {
+                // 🆕 HIDE WHEN EMPTY: Follow theme's original behavior
+                element.style.display = 'none';
+                element.style.visibility = 'hidden';
+                element.style.opacity = '0';
+                element.classList.add('hidden', 'cart-count--hidden');
+                element.classList.remove('visible', 'cart-count--visible');
+              }
             }
             
             updatedElements++;
